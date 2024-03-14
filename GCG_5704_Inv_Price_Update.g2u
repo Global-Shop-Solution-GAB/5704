@@ -1,0 +1,281 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..Create
+Gui.Form..Size(12465,2310)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MousePointer(0)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form..Caption("Inventory Price Update")
+Gui.Form.txtFilePath.Create(TextBox,"",True,11040,300,0,180,525,True,0,"Arial",8,-2147483643,1)
+Gui.Form.cmdBrowse.Create(Button)
+Gui.Form.cmdBrowse.Size(855,375)
+Gui.Form.cmdBrowse.Position(11385,480)
+Gui.Form.cmdBrowse.Caption("^")
+Gui.Form.cmdBrowse.Event(Click,cmdBrowse_Click)
+Gui.Form.cmdOK.Create(Button)
+Gui.Form.cmdOK.Size(855,375)
+Gui.Form.cmdOK.Position(180,975)
+Gui.Form.cmdOK.Caption("OK")
+Gui.Form.cmdOK.Event(Click,cmdOK_Click)
+Gui.Form.lbl1.Create(Label,"File Path",True,1935,255,0,180,315,True,0,"Arial",8,-2147483633,0)
+Gui.Form.lbl2.Create(Label,"Max Number of Rows per Sheet",True,2490,255,0,8190,945,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtMaxRow.Create(TextBox,"10000",True,615,300,0,10695,855,True,1,"Arial",8,-2147483643,1)
+Gui.Form.txtMaxRow.MaxLength(5)
+Gui.Form.txtMaxRow.NumericOnly(2)
+Gui.Form.proBar1.Create(ProgressBar)
+Gui.Form.proBar1.Size(11040,105)
+Gui.Form.proBar1.Position(180,1560)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'BN, Oct 4, 2019
+'Customer: West Salem Machinery
+'This project will update Inventory Master Price from an Excel File.
+'The program will read from the 3rd tab of the Excel Files. Column B is Part number, column E is price. Customer only has 1 Location which is blank.
+'A time stamp will be saved into User 2 of Inventory Master
+'Before update, a backup file will be saved to Global\Custom\5704\CCC\Transaction Log
+'After updating, a result file will be also saved to Global\Custom\5704\CCC\Transaction Log
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	V.Local.bIngroup.Declare
+	
+	f.Global.Security.IsInGroup(v.Caller.User,"UPDATEPR",V.Caller.CompanyCode,V.Local.bIngroup)
+	F.Intrinsic.Control.If(V.Local.bIngroup.Not)
+		F.Intrinsic.UI.Msgbox("User is not in Security Group","Attention")
+		f.Intrinsic.Control.ExitSub
+	F.Intrinsic.Control.EndIf
+	
+	f.ODBC.Connection!conx.OpenCompanyConnection(300)	
+	
+	f.Intrinsic.Control.CallSub("Check_And_Create_Custom_Folder")
+	gui.Form..Show	
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Subroutine called from:{6}{1}Error Occurred: {3}{1}Description: {4}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,v.Ambient.SubroutineCalledFrom,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Write_GAB_Error_Log","sError",v.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.UnLoad.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+
+	F.Intrinsic.Control.If(V.ODBC.conx.State,=,1)
+		F.ODBC.Connection!conx.close
+	F.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Subroutine called from:{6}{1}Error Occurred: {3}{1}Description: {4}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,v.Ambient.SubroutineCalledFrom,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End	
+F.Intrinsic.Control.EndTry
+Program.Sub.UnLoad.End
+
+Program.Sub.Check_And_Create_Custom_Folder.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.bExist.Declare
+	v.Local.sFile.Declare
+	v.Local.sDir.Declare
+	
+	f.Intrinsic.String.Build("{0}\Custom",v.Caller.GlobalDir,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.String.Build("{0}\Custom\5704",v.Caller.GlobalDir,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.String.Build("{0}\Custom\5704\{1}",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf	
+	
+	f.Intrinsic.String.Build("{0}\Custom\5704\{1}\Transaction Log",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf	
+	
+	f.Intrinsic.String.Build("{0}\Custom\5704\{1}\GAB Error Log",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf		
+	
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: 5704 {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	f.Intrinsic.Control.CallSub("Write_GAB_Error_Log","sError",v.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry	
+Program.Sub.Check_And_Create_Custom_Folder.End
+
+Program.Sub.Write_GAB_Error_Log.Start
+'Parameters: sError
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sFile.Declare
+	v.Local.sContent.Declare	
+
+	'Write error log file
+	f.Intrinsic.String.Build("User: {1}{0}Terminal: {2}{0}",v.Ambient.NewLine,v.Caller.User,v.Caller.Terminal,v.Local.sContent)
+	f.Intrinsic.String.Build("{0}{1}{2}{3}",v.Local.sContent,v.Ambient.Now,v.Ambient.NewLine,v.Args.sError,v.Local.sContent)
+	f.Intrinsic.String.Build("{0}\Custom\5704\{1}\GAB Error Log\{2}_{3}_{4}_{5}.txt",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Caller.User,v.Caller.Terminal,v.Ambient.Date.FormatYYYYMMDD,v.Ambient.Now.FormatHHNNSS,v.Local.sFile)
+	f.Intrinsic.File.String2File(v.Local.sFile,v.Local.sContent)
+	
+f.Intrinsic.Control.Catch
+	f.Intrinsic.Control.CallSub("Unload")
+f.Intrinsic.Control.EndTry
+Program.Sub.Write_GAB_Error_Log.End
+
+Program.Sub.cmdOK_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.bExist.Declare
+	v.Local.sFile.Declare
+	v.Local.sRet.Declare
+	v.Local.sRow.Declare
+	v.Local.iMaxRow.Declare
+	v.Local.iCnt.Declare
+	v.Local.iRow.Declare
+	v.Local.sCell.Declare
+	v.Local.sSQL.Declare
+	v.Local.sPrice.Declare
+	v.Local.sPart.Declare
+	v.Local.bNumeric.Declare
+	v.Local.sBackup.Declare
+	v.Local.sBackupFile.Declare
+	v.Local.sNewFile.Declare
+	v.Local.sNewFileContent.Declare
+	
+	v.Local.sFile.Set(v.Screen.Form!txtFilePath.Text.Trim)
+	f.Intrinsic.File.Exists(v.Local.sFile,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.UI.Msgbox("File does not exist.","Attention")
+		f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf	
+	
+	v.Local.iMaxRow.Set(v.Screen.Form!txtMaxRow.Text)
+	f.Intrinsic.Control.If(v.Local.iMaxRow,>,10000,or,v.Local.iMaxRow,<=,1)
+		f.Intrinsic.UI.Msgbox("Max Row must be in range [2,10000].","Attention")
+		f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf
+
+	F.Automation.MSExcel.ReadSpreadsheet(v.Local.sFile,6,v.Local.iMaxRow,v.Local.sRet)
+	f.Intrinsic.String.Split(v.Local.sRet,"&^&",v.Local.sRet)
+	f.Intrinsic.Control.If(v.Local.sRet.UBound,<,2)
+		f.Intrinsic.UI.Msgbox("There must be at least 3 tabs in the Excel file.","Attention")
+			f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf
+	
+	'Disable control
+	gui.Form.txtFilePath.Enabled(False)
+	gui.Form.txtMaxRow.Enabled(False)
+	gui.Form.cmdBrowse.Enabled(False)
+	gui.Form.cmdOK.Enabled(False)
+	
+	'Backup price
+	f.Intrinsic.UI.InvokeWaitDialog("Backup price...")
+	f.Intrinsic.Control.If(v.DataTable.InvBackUp.Exists)
+		f.Data.DataTable.Close("InvBackUp")
+	f.Intrinsic.Control.EndIf
+	f.Data.DataTable.CreateFromSQL("InvBackUp","conx","Select Part,Amt_Price from Inventory_Mstr",True)
+	f.Data.DataView.Create("InvBackUp","dvInvBackUp")
+	f.Data.DataView.ToString("InvBackUp","dvInvBackUp","Part*!*Amt_Price",",",v.Ambient.NewLine,v.Local.sBackUp)
+	f.Intrinsic.String.Build("{0}\Custom\5704\{1}\Transaction Log\{3}_Backup_{2}",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Ambient.Now.FormatYYYYMMDDHHNNSS,v.Caller.User,v.Local.sBackupFile)
+	f.Intrinsic.File.String2File(v.Local.sBackupFile,v.Local.sBackup)
+	f.Intrinsic.UI.CloseWaitDialog
+	
+	v.Local.sNewFileContent.Set("Sheet,Part,Price")
+	gui.Form.proBar1.Visible(True)
+	gui.Form.proBar1.Max(v.Local.sRet.UBound)
+	'Each Sheet
+	f.Intrinsic.Control.For(v.Local.iCnt,2,v.Local.sRet.UBound,1)
+		gui.Form.proBar1.Value(v.Local.iCnt)
+		f.Intrinsic.String.Split(v.Local.sRet(v.Local.iCnt),"$!$",v.Local.sRow)
+		'Each Row in the Sheet
+		f.Intrinsic.Control.For(v.Local.iRow,1,v.Local.sRow.UBound,1)
+			f.Intrinsic.String.Split(v.Local.sRow(v.Local.iRow),"*!*",v.Local.sCell)
+			'Get Part
+			v.Local.sPart.Set(v.Local.sCell(1).Trim)			
+			'Get Price
+			v.Local.sPrice.Set(v.Local.sCell(4))
+			
+			'Exit inner For when Part is blank
+			f.Intrinsic.Control.If(v.Local.sPart.Trim,=,"")
+				f.Intrinsic.Control.ExitFor(v.Local.iRow)
+			f.Intrinsic.Control.EndIf
+			
+			f.Intrinsic.Math.IsNumeric(v.Local.sPrice,v.Local.bNumeric)
+			f.Intrinsic.Control.If(v.Local.bNumeric.Not)
+				v.Local.sPrice.Set("Error Not Numeric")
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Format(v.Local.sCell(4).Trim,"#########0.00000",v.Local.sPrice)
+				'Update Price
+				f.Intrinsic.String.Build("Update Inventory_MSTR set Amt_Price = '{1}' where Part = '{0}'",v.Local.sPart.PSQLFriendly,v.Local.sPrice,v.Local.sSQL)
+				f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+				'Update User 2
+				f.Intrinsic.String.Build("Update Inventory_MST2 set Text_Info2 = '{1} {2}' where Part = '{0}'",v.Local.sPart.PSQLFriendly,v.Caller.User,v.Ambient.Now,v.Local.sSQL)
+				f.ODBC.Connection!conx.Execute(v.Local.sSQL)				
+				
+			f.Intrinsic.Control.EndIf
+			f.Intrinsic.String.Build("{0}{1}{2},{3},{4}",v.Local.sNewFileContent,v.Ambient.NewLine,v.Local.iCnt,v.Local.sPart,v.Local.sPrice,v.Local.sNewFileContent)			
+			
+		f.Intrinsic.Control.Next(v.Local.iRow)		
+		
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	
+	f.Intrinsic.String.Build("{0}\Custom\5704\{1}\Transaction Log\{3}_NewPrice_{2}",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Ambient.Now.FormatYYYYMMDDHHNNSS,v.Caller.User,v.Local.sNewFile)
+	f.Intrinsic.File.String2File(v.Local.sNewFile,v.Local.sNewFileContent)
+	gui.Form.proBar1.Visible(False)
+	
+	f.Intrinsic.Control.CallSub("Unload")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Subroutine called from:{6}{1}Error Occurred: {3}{1}Description: {4}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,v.Ambient.SubroutineCalledFrom,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)	
+	f.Intrinsic.Control.CallSub("Write_GAB_Error_Log","sError",v.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdOK_Click.End
+
+Program.Sub.cmdBrowse_Click.Start
+f.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	v.Local.sFileExcel.Declare
+	
+	'open a file explorer and look for an xls sheet
+	F.Intrinsic.UI.ShowOpenFileDialog("","*|*.*",V.Local.sFileExcel)
+	F.Intrinsic.Control.If(V.Local.sFileExcel,=,"***CANCEL***")
+		F.Intrinsic.UI.Msgbox("No File Was Selected")
+		F.Intrinsic.Control.ExitSub
+	F.Intrinsic.Control.EndIf
+	
+	gui.Form.txtFilePath.Text(V.Local.sFileExcel)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Subroutine called from:{6}{1}Error Occurred: {3}{1}Description: {4}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,v.Ambient.SubroutineCalledFrom,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)	
+	f.Intrinsic.Control.CallSub("Write_GAB_Error_Log","sError",v.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdBrowse_Click.End
+
+Program.Sub.Form_UnLoad.Start
+f.Intrinsic.Control.CallSub("Unload")
+Program.Sub.Form_UnLoad.End
